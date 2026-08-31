@@ -32,6 +32,14 @@ public class CouchdbArtifactPath extends ResultArchiveStorePath {
         super(fileSystem, b, nameElements, i, size);
     }
 
+    protected CouchdbArtifactPath(FileSystem fileSystem, boolean b, List<String> nameElements, int i, int size,
+            String contentType, int length, String artifactRecordId) {
+        super(fileSystem, b, nameElements, i, size);
+        this.contentType = contentType;
+        this.length = length;
+        this.artifactRecordId = artifactRecordId;
+    }
+
     protected CouchdbArtifactPath(@NotNull FileSystem fileSystem, String pathName, JsonObject artifactDetails,
             String artifactRecordId) {
         super(fileSystem, pathName);
@@ -75,7 +83,8 @@ public class CouchdbArtifactPath extends ResultArchiveStorePath {
             return this;
         }
 
-        return new CouchdbArtifactPath(this.fileSystem, true, this.nameElements, 0, this.nameElements.size());
+        return new CouchdbArtifactPath(this.fileSystem, true, this.nameElements, 0, this.nameElements.size(),
+                this.contentType, this.length, this.artifactRecordId);
     }
 
     public String getArtifactRecordId() {
@@ -105,6 +114,14 @@ public class CouchdbArtifactPath extends ResultArchiveStorePath {
     
     @Override
     protected ResultArchiveStorePath newPathObject(boolean absolute, List<String> nameElements, int start, int end) {
+        // Only propagate metadata (contentType, length, artifactRecordId) when reproducing
+        // the same path (same element range), e.g. toAbsolutePath. For sub-paths (getParent,
+        // subpath, relativize) the metadata belongs to the original leaf and must not be copied.
+        boolean isSamePath = (start == 0 && end == this.nameElements.size());
+        if (isSamePath) {
+            return new CouchdbArtifactPath(this.fileSystem, absolute, nameElements, start, end,
+                    this.contentType, this.length, this.artifactRecordId);
+        }
         return new CouchdbArtifactPath(this.fileSystem, absolute, nameElements, start, end);
     }
 
